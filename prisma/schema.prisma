@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Module {
+  id          String   @id @default(cuid())
+  key         String   @unique // e.g. "email", "data"
+  name        String
+  description String?
+
+  clientModules ClientModule[]
+  userPermissions UserPermission[]
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  modules ClientModule[]
+  users   User[]
+}
+
+model ClientModule {
+  id        String   @id @default(cuid())
+  clientId  String
+  moduleId  String
+  
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  module    Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, moduleId])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  role      String   @default("USER") // ADMIN, USER
+  clientId  String
+
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  permissions UserPermission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model UserPermission {
+  id        String   @id @default(cuid())
+  userId    String
+  moduleId  String
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module    Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, moduleId])
+}
