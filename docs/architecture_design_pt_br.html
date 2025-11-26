@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Especificação Técnica: Arquitetura de Controle de Acesso SaaS</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 60px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 4px solid #667eea;
+        }
+
+        h2 {
+            color: #667eea;
+            font-size: 2rem;
+            margin-top: 50px;
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        h3 {
+            color: #764ba2;
+            font-size: 1.5rem;
+            margin-top: 35px;
+            margin-bottom: 20px;
+        }
+
+        p {
+            margin: 15px 0;
+            line-height: 1.8;
+        }
+
+        strong {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        tbody tr:hover {
+            background: #f5f5f5;
+        }
+
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #e83e8c;
+            font-size: 0.9em;
+        }
+
+        pre code {
+            background: transparent;
+            padding: 0;
+            color: #f8f8f2;
+        }
+
+        .mermaid {
+            background: white;
+            padding: 30px;
+            margin: 30px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .note {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .advantages {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 4px;
+        }
+
+        .advantages ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .advantages li {
+            padding: 8px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        .advantages li:before {
+            content: "✅";
+            position: absolute;
+            left: 0;
+        }
+
+        hr {
+            border: none;
+            border-top: 2px solid #e0e0e0;
+            margin: 40px 0;
+        }
+
+        ul,
+        ol {
+            margin: 15px 0;
+            padding-left: 30px;
+        }
+
+        li {
+            margin: 8px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Especificação Técnica: Arquitetura de Controle de Acesso SaaS</h1>
+
+        <h2>1. Resumo Executivo</h2>
+        <p>Este documento define a arquitetura para o sistema de <strong>Controle de Acesso Baseado em
+                Contrato</strong>. Este sistema é a camada de segurança fundamental para nossa plataforma SaaS,
+            garantindo que o acesso a recursos seja estritamente limitado pelos contratos do cliente antes que quaisquer
+            permissões em nível de usuário sejam aplicadas.</p>
+        <p><strong>Objetivo Chave</strong>: Impor um "Teto Rígido" (Hard Ceiling) onde
+            <code>Acesso do Usuário <= Contrato do Cliente</code>.</p>
+
+        <h2>2. Definições Principais</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Termo</th>
+                    <th>Definição</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Módulo</strong></td>
+                    <td>Um conjunto de recursos distinto e vendável (ex: <code>email</code>, <code>crm</code>,
+                        <code>analytics</code>). Identificado por uma chave única.</td>
+                </tr>
+                <tr>
+                    <td><strong>Cliente</strong></td>
+                    <td>Um locatário/conta empresarial.</td>
+                </tr>
+                <tr>
+                    <td><strong>Escopo do Contrato</strong></td>
+                    <td>O conjunto de Módulos que um Cliente comprou. Este é o <strong>Acesso Máximo Possível</strong>
+                        para qualquer usuário nesse cliente.</td>
+                </tr>
+                <tr>
+                    <td><strong>Permissão do Usuário</strong></td>
+                    <td>O conjunto de Módulos que um Usuário específico tem permissão para acessar.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>3. Modelo de Dados Otimizado</h2>
+
+        <h3>3.1 Tabela: <code>modules</code> (Catálogo de Módulos)</h3>
+        <p>Lista completa de todos os módulos disponíveis na plataforma.</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>id</th>
+                    <th>nome</th>
+                    <th>categoria</th>
+                    <th>descricao</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>0001</td>
+                    <td>Relatório Email</td>
+                    <td>Relatórios</td>
+                    <td>Análise de campanhas de email</td>
+                </tr>
+                <tr>
+                    <td>0002</td>
+                    <td>Relatório SMS</td>
+                    <td>Relatórios</td>
+                    <td>Análise de campanhas SMS</td>
+                </tr>
+                <tr>
+                    <td>0003</td>
+                    <td>Relatório WhatsApp</td>
+                    <td>Relatórios</td>
+                    <td>Análise de campanhas WhatsApp</td>
+                </tr>
+                <tr>
+                    <td>0004</td>
+                    <td>CDP</td>
+                    <td>Plataforma</td>
+                    <td>Customer Data Platform</td>
+                </tr>
+                <tr>
+                    <td>0005</td>
+                    <td>Envio Email</td>
+                    <td>Envios</td>
+                    <td>Ferramenta de envio de email</td>
+                </tr>
+                <tr>
+                    <td>0006</td>
+                    <td>Envio SMS</td>
+                    <td>Envios</td>
+                    <td>Ferramenta de envio SMS</td>
+                </tr>
+            </tbody>
+        </table>
+        <p><strong>Schema:</strong></p>
+        <pre><code>CREATE TABLE modules (
+  id VARCHAR(10) PRIMARY KEY,
+  nome VARCHAR(100) NOT NULL,
+  categoria VARCHAR(50),
+  descricao TEXT
+);</code></pre>
+
+        <hr>
+
+        <h3>3.2 Tabela: <code>clients</code> (Clientes/Marcas)</h3>
+        <p>Cadastro de todos os clientes da plataforma.</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>id</th>
+                    <th>nome</th>
+                    <th>status</th>
+                    <th>data_contrato</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>0001</td>
+                    <td>Via Mia</td>
+                    <td>Ativo</td>
+                    <td>2024-01-15</td>
+                </tr>
+                <tr>
+                    <td>0002</td>
+                    <td>Empresa XYZ</td>
+                    <td>Ativo</td>
+                    <td>2024-03-20</td>
+                </tr>
+                <tr>
+                    <td>0003</td>
+                    <td>Marca ABC</td>
+                    <td>Inativo</td>
+                    <td>2023-11-10</td>
+                </tr>
+            </tbody>
+        </table>
+        <p><strong>Schema:</strong></p>
+        <pre><code>CREATE TABLE clients (
+  id VARCHAR(10) PRIMARY KEY,
+  nome VARCHAR(200) NOT NULL,
+  status VARCHAR(20) DEFAULT 'Ativo',
+  data_contrato DATE
+);</code></pre>
+
+        <hr>
+
+        <h3>3.3 Tabela: <code>client_contracts</code> (Contrato = Universo do Cliente)</h3>
+        <p>Define quais módulos cada cliente contratou. <strong>Este é o "teto rígido"</strong>.</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>client_id</th>
+                    <th>module_id</th>
+                    <th>module_name</th>
+                    <th>data_ativacao</th>
+                    <th>data_expiracao</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>0001</td>
+                    <td>0001</td>
+                    <td>Relatório Email</td>
+                    <td>2024-01-15</td>
+                    <td>NULL</td>
+                </tr>
+                <tr>
+                    <td>0001</td>
+                    <td>0002</td>
+                    <td>Relatório SMS</td>
+                    <td>2024-01-15</td>
+                    <td>NULL</td>
+                </tr>
+                <tr>
+                    <td>0001</td>
+                    <td>0005</td>
+                    <td>Envio Email</td>
+                    <td>2024-01-15</td>
+                    <td>NULL</td>
+                </tr>
+                <tr>
+                    <td>0002</td>
+                    <td>0001</td>
+                    <td>Relatório Email</td>
+                    <td>2024-03-20</td>
+                    <td>NULL</td>
+                </tr>
+                <tr>
+                    <td>0002</td>
+                    <td>0004</td>
+                    <td>CDP</td>
+                    <td>2024-03-20</td>
+                    <td>NULL</td>
+                </tr>
+            </tbody>
+        </table>
+        <p><strong>Exemplo</strong>: Via Mia (0001) tem acesso a Relatório Email, Relatório SMS e Envio Email.</p>
+        <div class="note">
+            <strong>Nota</strong>: O campo <code>module_name</code> é desnormalizado para facilitar consultas. É
+            derivado de <code>modules.nome</code> via FK.
+        </div>
+        <p><strong>Schema:</strong></p>
+        <pre><code>CREATE TABLE client_contracts (
+  client_id VARCHAR(10) NOT NULL,
+  module_id VARCHAR(10) NOT NULL,
+  module_name VARCHAR(100) NOT NULL, -- Desnormalizado de modules.nome
+  data_ativacao DATE,
+  data_expiracao DATE,
+  PRIMARY KEY (client_id, module_id),
+  FOREIGN KEY (client_id) REFERENCES clients(id),
+  FOREIGN KEY (module_id) REFERENCES modules(id)
+);
+
+CREATE INDEX idx_client_contract ON client_contracts(client_id);</code></pre>
+
+        <hr>
+
+        <h3>3.4 Tabela: <code>access_profiles</code> (Perfis de Acesso)</h3>
+        <p>Perfis criados pela marca para agrupar permissões.</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>id</th>
+                    <th>client_id</th>
+                    <th>nome</th>
+                    <th>descricao</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>0001</td>
+                    <td>0001</td>
+                    <td>Marketing</td>
+                    <td>Acesso a relatórios de campanhas</td>
+                </tr>
+                <tr>
+                    <td>0002</td>
+                    <td>0001</td>
+                    <td>Operações</td>
+                    <td>Acesso a envios e relatórios</td>
+                </tr>
+                <tr>
+                    <td>0003</td>
+                    <td>0002</td>
+                    <td>Analista</td>
+                    <td>Acesso completo</td>
+                </tr>
+            </tbody>
+        </table>
+        <p><strong>Schema:</strong></p>
+        <pre><code>CREATE TABLE access_profiles (
+  id VARCHAR(10) PRIMARY KEY,
+  client_id VARCHAR(10) NOT NULL,
+  nome VARCHAR(100) NOT NULL,
+  descricao TEXT,
+  FOREIGN KEY (client_id) REFERENCES clients(id)
+);
+
+CREATE INDEX idx_profile_client ON access_profiles(client_id);</code></pre>
+
+        <hr>
+
+        <h3>3.5 Tabela: <code>profile_permissions</code> (Módulos do Perfil)</h3>
+        <p>Define quais módulos cada perfil pode acessar. <strong>Deve ser subconjunto do contrato</strong>.</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>profile_id</th>
+                    <th>module_id</th>
+                    <th>module_name</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>0001</td>
+                    <td>0001</td>
+                    <td>Relatório Email</td>
+                </tr>
+                <tr>
+                    <td>0001</td>
+                    <td>0002</td>
+                    <td>Relatório SMS</td>
+                </tr>
+                <tr>
+                    <td>0002</td>
+                    <td>0001</td>
+                    <td>Relatório Email</td>
+                </tr>
+                <tr>
+                    <td>0002</td>
+                    <td>0002</td>
+                    <td>Relatório SMS</td>
+                </tr>
+                <tr>
+                    <td>0002</td>
+                    <td>0005</td>
+                    <td>Envio Email</td>
+                </tr>
+            </tbody>
+        </table>
+        <p><strong>Exemplo</strong>: Perfil "Marketing" (0001) da Via Mia tem acesso apenas aos relatórios.</p>
+        <div class="note">
+            <strong>Nota</strong>: O campo <code>module_name</code> é desnormalizado para facilitar consultas. É
+            derivado de <code>modules.nome</code> via FK.
+        </div>
+        <p><strong>Schema:</strong></p>
+        <pre><code>CREATE TABLE profile_permissions (
+  profile_id VARCHAR(10) NOT NULL,
+  module_id VARCHAR(10) NOT NULL,
+  module_name VARCHAR(100) NOT NULL, -- Desnormalizado de modules.nome
+  PRIMARY KEY (profile_id, module_id),
+  FOREIGN KEY (profile_id) REFERENCES access_profiles(id),
+  FOREIGN KEY (module_id) REFERENCES modules(id)
+);
+
+CREATE INDEX idx_profile_perms ON profile_permissions(profile_id);</code></pre>
+
+        <hr>
+
+        <h3>3.6 Tabela: <code>users</code> (Usuários)</h3>
+        <p>Usuários finais vinculados a um cliente e perfil.</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>id</th>
+                    <th>client_id</th>
+                    <th>profile_id</th>
+                    <th>email</th>
+                    <th>nome</th>
+                    <th>funcao</th>
+                    <th>status</th>
+                    <th>last_login</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1234</td>
+                    <td>0001</td>
+                    <td>0001</td>
+                    <td>sellbie@viamia.com.br</td>
+                    <td>João Silva</td>
+                    <td>Vendedor</td>
+                    <td>Ativo</td>
+                    <td>2024-11-25 10:30:00</td>
+                </tr>
+                <tr>
+                    <td>1235</td>
+                    <td>0001</td>
+                    <td>0002</td>
+                    <td>maria@viamia.com.br</td>
+                    <td>Maria Santos</td>
+                    <td>Gerente</td>
+                    <td>Ativo</td>
+                    <td>2024-11-24 15:45:00</td>
+                </tr>
+                <tr>
+                    <td>1236</td>
+                    <td>0002</td>
+                    <td>0003</td>
+                    <td>ana@xyz.com</td>
+                    <td>Ana Costa</td>
+                    <td>Analista</td>
+                    <td>Ativo</td>
+                    <td>2024-11-25 09:15:00</td>
+                </tr>
+            </tbody>
+        </table>
+        <p><strong>Schema:</strong></p>
+        <pre><code>CREATE TABLE users (
+  id VARCHAR(10) PRIMARY KEY,
+  client_id VARCHAR(10) NOT NULL,
+  profile_id VARCHAR(10),
+  email VARCHAR(200) UNIQUE NOT NULL,
+  nome VARCHAR(200) NOT NULL,
+  funcao VARCHAR(100),
+  status VARCHAR(20) DEFAULT 'Ativo',
+  last_login TIMESTAMP, -- Registro do último acesso
+  FOREIGN KEY (client_id) REFERENCES clients(id),
+  FOREIGN KEY (profile_id) REFERENCES access_profiles(id)
+);
+
+CREATE INDEX idx_user_client ON users(client_id);
+CREATE INDEX idx_user_profile ON users(profile_id);
+CREATE INDEX idx_user_last_login ON users(last_login); -- Para queries de atividade</code></pre>
+
+        <hr>
+
+        <h2>4. Lógica de Acesso Otimizada</h2>
+
+        <h3>4.1 Query de Verificação (1 JOIN apenas)</h3>
+        <pre><code>-- Verifica se usuário 1234 pode acessar módulo 0001
+SELECT 
+  u.id as user_id,
+  u.nome as user_name,
+  m.id as module_id,
+  m.nome as module_name,
+  CASE 
+    WHEN cc.module_id IS NULL THEN 'NEGADO - Módulo não contratado'
+    WHEN pp.module_id IS NULL THEN 'NEGADO - Perfil sem permissão'
+    ELSE 'PERMITIDO'
+  END as resultado
+FROM users u
+LEFT JOIN client_contracts cc 
+  ON u.client_id = cc.client_id AND cc.module_id = '0001'
+LEFT JOIN profile_permissions pp 
+  ON u.profile_id = pp.profile_id AND pp.module_id = '0001'
+CROSS JOIN modules m
+WHERE u.id = '1234' AND m.id = '0001';</code></pre>
+
+        <h3>4.2 Query: Listar Módulos Disponíveis para Usuário</h3>
+        <pre><code>-- Lista todos os módulos que o usuário 1234 pode acessar
+SELECT DISTINCT
+  m.id,
+  m.nome,
+  m.categoria
+FROM users u
+JOIN profile_permissions pp ON u.profile_id = pp.profile_id
+JOIN modules m ON pp.module_id = m.id
+JOIN client_contracts cc ON u.client_id = cc.client_id AND m.id = cc.module_id
+WHERE u.id = '1234' AND u.status = 'Ativo';</code></pre>
+
+        <hr>
+
+        <h2>5. Diagrama Otimizado</h2>
+        <div class="mermaid">
+            erDiagram
+            MODULES {
+            varchar id PK "0001, 0002, 0003..."
+            varchar nome "Relatório Email, CDP..."
+            varchar categoria
+            }
+
+            CLIENTS {
+            varchar id PK "0001, 0002..."
+            varchar nome "Via Mia, Empresa XYZ..."
+            varchar status
+            }
+
+            CLIENT_CONTRACTS {
+            varchar client_id FK
+            varchar module_id FK
+            varchar module_name "Desnormalizado"
+            date data_ativacao
+            }
+
+            ACCESS_PROFILES {
+            varchar id PK "0001, 0002..."
+            varchar client_id FK
+            varchar nome "Marketing, Operações..."
+            }
+
+            PROFILE_PERMISSIONS {
+            varchar profile_id FK
+            varchar module_id FK
+            varchar module_name "Desnormalizado"
+            }
+
+            USERS {
+            varchar id PK "1234, 1235..."
+            varchar client_id FK
+            varchar profile_id FK
+            varchar email
+            varchar nome "João Silva..."
+            varchar funcao "Vendedor..."
+            varchar status "Ativo/Inativo"
+            timestamp last_login "Último acesso"
+            }
+
+            %% Relacionamentos
+            CLIENTS ||--o{ CLIENT_CONTRACTS : "contrata"
+            MODULES ||--o{ CLIENT_CONTRACTS : "incluído em"
+
+            CLIENTS ||--o{ ACCESS_PROFILES : "define"
+            ACCESS_PROFILES ||--o{ PROFILE_PERMISSIONS : "contém"
+            MODULES ||--o{ PROFILE_PERMISSIONS : "acessível via"
+
+            CLIENTS ||--o{ USERS : "emprega"
+            ACCESS_PROFILES ||--o{ USERS : "atribuído a"
+
+            %% Regra de Negócio
+            CLIENT_CONTRACTS ||..|| PROFILE_PERMISSIONS : "REGRA: profile_permissions.module_id DEVE existir em
+            client_contracts"
+        </div>
+
+        <hr>
+
+        <h2>6. Vantagens desta Arquitetura</h2>
+        <div class="advantages">
+            <ul>
+                <li><strong>Performance</strong>: Queries com 1-2 JOINs apenas, usando índices otimizados</li>
+                <li><strong>Escalabilidade</strong>: Estrutura horizontal permite milhões de registros</li>
+                <li><strong>Clareza</strong>: IDs numéricos facilitam rastreamento e debugging</li>
+                <li><strong>Segurança</strong>: Validação em 2 camadas (Contrato → Perfil)</li>
+                <li><strong>Flexibilidade</strong>: Fácil adicionar/remover módulos do contrato ou perfil</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            themeVariables: {
+                primaryColor: '#667eea',
+                primaryTextColor: '#fff',
+                primaryBorderColor: '#764ba2',
+                lineColor: '#764ba2',
+                secondaryColor: '#f4f4f4',
+                tertiaryColor: '#fff'
+            }
+        });
+    </script>
+</body>
+
+</html>
